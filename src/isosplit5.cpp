@@ -1033,7 +1033,7 @@ bool merge_test(std::vector<bigint>* L12, bigint M, bigint N1, bigint N2, float*
     std::vector<float> inv_avg_covmat;
     inv_avg_covmat.resize(M * M);
     if (!matinv(M, inv_avg_covmat.data(), avg_covmat.data())) {
-        printf("Unable to invert matrix. This may be due to the fact that you have duplicate events. Contact Jeremy if this is not the case, or if you would prefer the program to continue in this case. Aborting.\n");
+        fprintf(stderr, "Unable to invert matrix. This may be due to the fact that you have duplicate events. Contact Jeremy if this is not the case, or if you would prefer the program to continue in this case. Aborting.\n");
         abort();
         return false;
     }
