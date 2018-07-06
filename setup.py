@@ -1,4 +1,4 @@
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages, distutils
 from setuptools.command.build_ext import build_ext
 import sys
 
@@ -40,7 +40,7 @@ def has_flag(compiler, flagname):
         f.write('int main (int argc, char **argv) { return 0; }')
         try:
             compiler.compile([f.name], extra_postargs=[flagname])
-        except setuptools.distutils.errors.CompileError:
+        except distutils.errors.CompileError:
             return False
     return True
 
@@ -82,10 +82,10 @@ class BuildExt(build_ext):
             ext.extra_compile_args = opts
         build_ext.build_extensions(self)
 
-setuptools.setup(
+setup(
     name='isosplit5',
     version='0.1.0',
-    packages=setuptools.find_packages(),
+    packages=find_packages(),
     license="Apache 2",
     ext_modules=ext_modules,
     cmdclass={'build_ext': BuildExt},
