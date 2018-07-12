@@ -87,7 +87,7 @@ class BuildExt(build_ext):
 
 setup(
     name='isosplit5',
-    version='0.1.1',
+    version='0.1.2',
     author="Jeremy Magland",
     author_email="",
     description="Efficient clustering algorithm for unknown number of unimodal clusters",
