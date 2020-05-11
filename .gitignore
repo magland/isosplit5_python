@@ -8,3 +8,5 @@ dist/
 *.egg-info/
 
 .idea
+.eggs
+tmp/
