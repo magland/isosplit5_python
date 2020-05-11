@@ -313,9 +313,7 @@ bool isosplit5(int* labels, bigint M, bigint N, float* X, isosplit5_opts opts)
     ns_isosplit5::compute_covmats(covmats, M, N, Kmax, X, labels, centroids, clusters_to_compute_vec);
 
     // The active labels are those that are still being used -- for now, everything is active
-    int active_labels_vec[Kmax];
-    for (bigint i = 0; i < Kmax; i++)
-        active_labels_vec[i] = 1;
+    std::vector<int> active_labels_vec(Kmax, 1);
     std::vector<int> active_labels;
     for (bigint i = 0; i < Kmax; i++)
         active_labels.push_back(i + 1);
@@ -435,9 +433,7 @@ bool isosplit5(int* labels, bigint M, bigint N, float* X, isosplit5_opts opts)
     }
 
     // We should remap the labels to occupy the first natural numbers
-    bigint labels_map[Kmax];
-    for (bigint i = 0; i < Kmax; i++)
-        labels_map[i] = 0;
+    std::vector<bigint> labels_map(Kmax, 0);
     for (bigint i = 0; i < (bigint)active_labels.size(); i++) {
         labels_map[active_labels[i] - 1] = i + 1;
     }
@@ -896,8 +892,9 @@ void get_pairs_to_compare(std::vector<bigint>* inds1, std::vector<bigint>* inds2
 {
     inds1->clear();
     inds2->clear();
-    double dists[K][K];
+    std::vector<std::vector<double>> dists(K);
     for (bigint k1 = 0; k1 < K; k1++) {
+        dists[k1].resize(K);
         for (bigint k2 = 0; k2 < K; k2++) {
             if ((active_comparisons_made[k1][k2]) || (k1 == k2))
                 dists[k1][k2] = -1;
@@ -1187,11 +1184,10 @@ void compare_pairs(std::vector<bigint>* clusters_changed, bigint* total_num_labe
 
 void get_pairs_to_compare3(std::vector<bigint>* i1s, std::vector<bigint>* i2s, bigint M, bigint N, double* centroids)
 {
-    float distances[N][N];
-    bigint used[N];
-    for (bigint i = 0; i < N; i++)
-        used[i] = 0;
+    std::vector<bigint> used(N, 0);   
+    std::vector<std::vector<float>> distances(N);
     for (bigint i = 0; i < N; i++) {
+        distances[i].resize(N);
         for (bigint j = i; j < N; j++) {
             double sumsqr = 0;
             for (bigint m = 0; m < M; m++) {
@@ -1205,9 +1201,7 @@ void get_pairs_to_compare3(std::vector<bigint>* i1s, std::vector<bigint>* i2s, b
     bool something_changed = true;
     while (something_changed) {
         something_changed = false;
-        bigint closest[N];
-        for (bigint i = 0; i < N; i++)
-            closest[i] = -1;
+        std::vector<bigint> closest(N, -1);
         for (bigint i = 0; i < N; i++) {
             double best_distance = -1;
             if (!used[i]) {
