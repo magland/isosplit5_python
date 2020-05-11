@@ -6,3 +6,5 @@ var/
 build/
 dist/
 *.egg-info/
+
+.idea
