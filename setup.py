@@ -100,5 +100,6 @@ setup(
     cmdclass={'build_ext': BuildExt},
     install_requires=[
         'numpy','pybind11>=2.2'
-    ]
+    ],
+    setup_requires=['pybind11>=2.2']
 )
