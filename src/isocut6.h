@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#ifndef jisotonic5_h
-#define jisotonic5_h
+#ifndef ISOCUT6_H
+#define ISOCUT6_H
 
 #include <stdlib.h>
 #include <cstdint>
 
 typedef int64_t bigint;
 
-void jisotonic5(bigint N, double* BB, double* MSE, double* AA, double* WW);
-void jisotonic5_updown(bigint N, double* out, double* in, double* weights);
-void jisotonic5_downup(bigint N, double* out, double* in, double* weights);
-void jisotonic5_sort(bigint N, double* out, const double* in);
+struct isocut6_opts {
+    bool already_sorted = false;
+};
 
-#endif
+void isocut6(double* dipscore_out, double* cutpoint_out, bigint N, double* samples, isocut6_opts opts);
+
+#endif // ISOCUT6_H

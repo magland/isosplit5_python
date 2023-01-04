@@ -19,20 +19,20 @@
 #include <stdlib.h>
 #include <algorithm>
 
-void jisotonic5(bigint N, float* BB, float* MSE, float* AA, float* WW)
+void jisotonic5(bigint N, double* BB, double* MSE, double* AA, double* WW)
 {
     if (N < 1)
         return;
 
-    float* unweightedcount = (float*)malloc(sizeof(float) * N);
-    float* count = (float*)malloc(sizeof(float) * N);
-    float* sum = (float*)malloc(sizeof(float) * N);
-    float* sumsqr = (float*)malloc(sizeof(float) * N);
+    double* unweightedcount = (double*)malloc(sizeof(double) * N);
+    double* count = (double*)malloc(sizeof(double) * N);
+    double* sum = (double*)malloc(sizeof(double) * N);
+    double* sumsqr = (double*)malloc(sizeof(double) * N);
     bigint last_index = -1;
 
     last_index++;
     unweightedcount[last_index] = 1;
-    float w0 = 1;
+    double w0 = 1;
     if (WW)
         w0 = WW[0];
     count[last_index] = w0;
@@ -57,13 +57,13 @@ void jisotonic5(bigint N, float* BB, float* MSE, float* AA, float* WW)
                 break;
             }
             else {
-                float prevMSE = sumsqr[last_index - 1] - sum[last_index - 1] * sum[last_index - 1] / count[last_index - 1];
+                double prevMSE = sumsqr[last_index - 1] - sum[last_index - 1] * sum[last_index - 1] / count[last_index - 1];
                 prevMSE += sumsqr[last_index] - sum[last_index] * sum[last_index] / count[last_index];
                 unweightedcount[last_index - 1] += unweightedcount[last_index];
                 count[last_index - 1] += count[last_index];
                 sum[last_index - 1] += sum[last_index];
                 sumsqr[last_index - 1] += sumsqr[last_index];
-                float newMSE = sumsqr[last_index - 1] - sum[last_index - 1] * sum[last_index - 1] / count[last_index - 1];
+                double newMSE = sumsqr[last_index - 1] - sum[last_index - 1] * sum[last_index - 1] / count[last_index - 1];
                 MSE[j] += newMSE - prevMSE;
                 last_index--;
             }
@@ -84,20 +84,20 @@ void jisotonic5(bigint N, float* BB, float* MSE, float* AA, float* WW)
     free(sumsqr);
 }
 
-void jisotonic5_updown(bigint N, float* out, float* in, float* weights)
+void jisotonic5_updown(bigint N, double* out, double* in, double* weights)
 {
-    float* B1 = (float*)malloc(sizeof(float) * N);
-    float* MSE1 = (float*)malloc(sizeof(float) * N);
-    float* B2 = (float*)malloc(sizeof(float) * N);
-    float* MSE2 = (float*)malloc(sizeof(float) * N);
-    float* in_reversed = (float*)malloc(sizeof(float) * N);
-    float* weights_reversed = 0;
+    double* B1 = (double*)malloc(sizeof(double) * N);
+    double* MSE1 = (double*)malloc(sizeof(double) * N);
+    double* B2 = (double*)malloc(sizeof(double) * N);
+    double* MSE2 = (double*)malloc(sizeof(double) * N);
+    double* in_reversed = (double*)malloc(sizeof(double) * N);
+    double* weights_reversed = 0;
 
     for (bigint j = 0; j < N; j++) {
         in_reversed[j] = in[N - 1 - j];
     }
     if (weights) {
-        weights_reversed = (float*)malloc(sizeof(float) * N);
+        weights_reversed = (double*)malloc(sizeof(double) * N);
         for (bigint j = 0; j < N; j++) {
             weights_reversed[j] = weights[N - 1 - j];
         }
@@ -106,7 +106,7 @@ void jisotonic5_updown(bigint N, float* out, float* in, float* weights)
     jisotonic5(N, B2, MSE2, in_reversed, weights_reversed);
     for (bigint j = 0; j < N; j++)
         MSE1[j] += MSE2[N - 1 - j];
-    float bestval = MSE1[0];
+    double bestval = MSE1[0];
     bigint best_ind = 0;
     for (bigint j = 0; j < N; j++) {
         if (MSE1[j] < bestval) {
@@ -130,9 +130,9 @@ void jisotonic5_updown(bigint N, float* out, float* in, float* weights)
         free(weights_reversed);
 }
 
-void jisotonic5_downup(bigint N, float* out, float* in, float* weights)
+void jisotonic5_downup(bigint N, double* out, double* in, double* weights)
 {
-    float* in_neg = (float*)malloc(sizeof(float) * N);
+    double* in_neg = (double*)malloc(sizeof(double) * N);
 
     for (bigint j = 0; j < N; j++)
         in_neg[j] = -in[j];
@@ -143,12 +143,12 @@ void jisotonic5_downup(bigint N, float* out, float* in, float* weights)
     free(in_neg);
 }
 
-void jisotonic5_sort(bigint N, float* out, const float* in)
+void jisotonic5_sort(bigint N, double* out, const double* in)
 {
     std::copy(in, in + N, out);
     std::sort(out, out + N);
 
-    //	QVector<float> in0(N);
+    //	QVector<double> in0(N);
     //	for (bigint j=0; j<N; j++) in0[j]=in[j];
     //	qSort(in0);
     //	for (bigint j=0; j<N; j++) out[j]=in0[j];

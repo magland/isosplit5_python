@@ -20,7 +20,6 @@
 #include <math.h>
 #include "isocut5.h"
 
-typedef std::vector<std::vector<bigint> > intarray2d;
 void alloc(intarray2d& X, bigint N1, bigint N2)
 {
     X.resize(N1);
@@ -29,29 +28,9 @@ void alloc(intarray2d& X, bigint N1, bigint N2)
     }
 }
 
-namespace ns_isosplit5 {
-struct kmeans_opts {
-    bigint num_iterations = 0;
-};
-
-bigint compute_max(bigint N, int* labels);
-bigint compute_max(bigint N, bigint* inds);
-void kmeans_multistep(int* labels, bigint M, bigint N, float* X, bigint K1, bigint K2, bigint K3, kmeans_opts opts);
-void kmeans_maxsize(int* labels, bigint M, bigint N, float* X, bigint maxsize, kmeans_opts opts);
-void compare_clusters(double* dip_score, std::vector<bigint>* new_labels1, std::vector<bigint>* new_labels2, bigint M, bigint N1, bigint N2, float* X1, float* X2, float* centroid1, float* centroid2);
-void compute_centroids(float* centroids, bigint M, bigint N, bigint Kmax, float* X, int* labels, std::vector<bigint>& clusters_to_compute_vec);
-void compute_covmats(float* covmats, bigint M, bigint N, bigint Kmax, float* X, int* labels, float* centroids, std::vector<bigint>& clusters_to_compute_vec);
-void get_pairs_to_compare(std::vector<bigint>* inds1, std::vector<bigint>* inds2, bigint M, bigint K, float* active_centroids, const intarray2d& active_comparisons_made);
-void compare_pairs(std::vector<bigint>* clusters_changed, bigint* total_num_label_changes, bigint M, bigint N, float* X, int* labels, const std::vector<bigint>& inds1, const std::vector<bigint>& inds2, const isosplit5_opts& opts, float* centroids, float* covmats); //the labels are updated
-}
-
-namespace smi {
-bool get_inverse_via_lu_decomposition(int M, float* out, float* in);
-}
-
 void isosplit5_mex(double* labels_out, int M, int N, double* X)
 {
-    float* Xf = (float*)malloc(sizeof(float) * M * N);
+    double* Xf = (double*)malloc(sizeof(double) * M * N);
     int* labelsi = (int*)malloc(sizeof(int) * N);
     for (bigint i = 0; i < M * N; i++)
         Xf[i] = X[i];
@@ -64,28 +43,24 @@ void isosplit5_mex(double* labels_out, int M, int N, double* X)
     free(labelsi);
 }
 
-struct parcelate2_opts {
-    bool final_reassign = false; //not yet implemented
-};
-
 struct p2_parcel {
     std::vector<bigint> indices;
-    std::vector<float> centroid;
+    std::vector<double> centroid;
     double radius;
 };
 
-void print_matrix(bigint M, bigint N, float* A)
+void print_matrix(bigint M, bigint N, double* A)
 {
     for (bigint m = 0; m < M; m++) {
         for (bigint n = 0; n < N; n++) {
-            float val = A[m + M * n];
+            double val = A[m + M * n];
             printf("%g ", val);
         }
         printf("\n");
     }
 }
 
-std::vector<float> p2_compute_centroid(bigint M, float* X, const std::vector<bigint>& indices)
+std::vector<double> p2_compute_centroid(bigint M, double* X, const std::vector<bigint>& indices)
 {
     std::vector<double> ret(M);
     double count = 0;
@@ -103,13 +78,13 @@ std::vector<float> p2_compute_centroid(bigint M, float* X, const std::vector<big
             ret[m] /= count;
         }
     }
-    std::vector<float> retf(M);
+    std::vector<double> retf(M);
     for (bigint m = 0; m < M; m++)
         retf[m] = ret[m];
     return retf;
 }
 
-double p2_compute_max_distance(const std::vector<float>& centroid, bigint M, float* X, const std::vector<bigint>& indices)
+double p2_compute_max_distance(const std::vector<double>& centroid, bigint M, double* X, const std::vector<bigint>& indices)
 {
     double max_dist = 0;
     for (bigint i = 0; i < (bigint)indices.size(); i++) {
@@ -155,7 +130,7 @@ std::vector<bigint> p2_randsample(bigint N, bigint K)
     */
 }
 
-bool parcelate2(int* labels, bigint M, bigint N, float* X, bigint target_parcel_size, bigint target_num_parcels, const parcelate2_opts& p2opts)
+bool parcelate2(int* labels, bigint M, bigint N, double* X, bigint target_parcel_size, bigint target_num_parcels, const parcelate2_opts& p2opts)
 {
     std::vector<p2_parcel> parcels;
 
@@ -287,7 +262,7 @@ bool parcelate2(int* labels, bigint M, bigint N, float* X, bigint target_parcel_
     return true;
 }
 
-bool isosplit5(int* labels, bigint M, bigint N, float* X, isosplit5_opts opts)
+bool isosplit5(int* labels, bigint M, bigint N, double* X, isosplit5_opts opts)
 {
     // compute the initial clusters
     bigint target_parcel_size = opts.min_cluster_size;
@@ -304,8 +279,8 @@ bool isosplit5(int* labels, bigint M, bigint N, float* X, isosplit5_opts opts)
     }
     int Kmax = ns_isosplit5::compute_max(N, labels);
 
-    float* centroids = (float*)malloc(sizeof(float) * M * Kmax);
-    float* covmats = (float*)malloc(sizeof(float) * M * M * Kmax);
+    double* centroids = (double*)malloc(sizeof(double) * M * Kmax);
+    double* covmats = (double*)malloc(sizeof(double) * M * M * Kmax);
     std::vector<bigint> clusters_to_compute_vec;
     for (bigint k = 0; k < Kmax; k++)
         clusters_to_compute_vec.push_back(1);
@@ -345,7 +320,7 @@ bool isosplit5(int* labels, bigint M, bigint N, float* X, isosplit5_opts opts)
 
             if (active_labels.size() > 0) {
                 // Create an array of active centroids and comparisons made, for determining the pairs to compare
-                float* active_centroids = (float*)malloc(sizeof(float) * M * active_labels.size());
+                double* active_centroids = (double*)malloc(sizeof(double) * M * active_labels.size());
                 for (bigint i = 0; i < (bigint)active_labels.size(); i++) {
                     for (bigint m = 0; m < M; m++) {
                         active_centroids[m + M * i] = centroids[m + M * (active_labels[i] - 1)];
@@ -456,7 +431,7 @@ bool isosplit5(int* labels, bigint M, bigint N, float* X, isosplit5_opts opts)
                 if (labels[i] == k)
                     inds_k.push_back(i);
             if (inds_k.size() > 0) {
-                float* X_k = (float*)malloc(sizeof(float) * M * inds_k.size()); //Warning: this may cause memory problems -- especially for recursive case
+                double* X_k = (double*)malloc(sizeof(double) * M * inds_k.size()); //Warning: this may cause memory problems -- especially for recursive case
                 int* labels_k = (int*)malloc(sizeof(int) * inds_k.size());
                 for (bigint i = 0; i < (bigint)inds_k.size(); i++) {
                     for (bigint m = 0; m < M; m++) {
@@ -490,7 +465,7 @@ bool isosplit5(int* labels, bigint M, bigint N, float* X, isosplit5_opts opts)
 */
 
 /*
-void isosplit5_old(bigint *labels_out,bigint M, bigint N,float *X,isosplit5_opts opts) {
+void isosplit5_old(bigint *labels_out,bigint M, bigint N,double *X,isosplit5_opts opts) {
     for (bigint i=0; i<N; i++) {
         labels_out[i]=1;
     }
@@ -589,7 +564,7 @@ bigint compute_max(bigint N, bigint* inds)
 }
 */
 
-void kmeans_initialize(double* centroids, bigint M, bigint N, bigint K, float* X)
+void kmeans_initialize(double* centroids, bigint M, bigint N, bigint K, double* X)
 {
     std::vector<bigint> used(N);
     for (bigint i = 0; i < N; i++)
@@ -613,7 +588,7 @@ void kmeans_initialize(double* centroids, bigint M, bigint N, bigint K, float* X
         }
     }
 }
-double compute_dist(bigint M, float* X, double* Y)
+double compute_dist(bigint M, double* X, double* Y)
 {
     double sumsqr = 0;
     for (bigint m = 0; m < M; m++) {
@@ -623,7 +598,7 @@ double compute_dist(bigint M, float* X, double* Y)
     return sqrt(sumsqr);
 }
 
-bigint kmeans_assign2(bigint M, bigint K, float* X0, double* centroids)
+bigint kmeans_assign2(bigint M, bigint K, double* X0, double* centroids)
 {
     bigint ret = 0;
     double best_dist = 0;
@@ -636,13 +611,13 @@ bigint kmeans_assign2(bigint M, bigint K, float* X0, double* centroids)
     }
     return ret;
 }
-void kmeans_assign(int* labels, bigint M, bigint N, bigint K, float* X, double* centroids)
+void kmeans_assign(int* labels, bigint M, bigint N, bigint K, double* X, double* centroids)
 {
     for (bigint i = 0; i < N; i++) {
         labels[i] = kmeans_assign2(M, K, &X[M * i], centroids);
     }
 }
-void kmeans_centroids(double* centroids, bigint M, bigint N, bigint K, float* X, int* labels)
+void kmeans_centroids(double* centroids, bigint M, bigint N, bigint K, double* X, int* labels)
 {
     std::vector<bigint> counts(K);
     for (bigint k = 1; k <= K; k++) {
@@ -667,7 +642,7 @@ void kmeans_centroids(double* centroids, bigint M, bigint N, bigint K, float* X,
     }
 }
 
-void kmeans(int* labels, bigint M, bigint N, float* X, bigint K, kmeans_opts opts)
+void kmeans(int* labels, bigint M, bigint N, double* X, bigint K, kmeans_opts opts)
 {
     if (K > N)
         K = N;
@@ -681,7 +656,7 @@ void kmeans(int* labels, bigint M, bigint N, float* X, bigint K, kmeans_opts opt
     free(centroids);
 }
 
-void extract_subarray(float* X_sub, bigint M, float* X, const std::vector<bigint>& inds)
+void extract_subarray(double* X_sub, bigint M, double* X, const std::vector<bigint>& inds)
 {
     for (bigint i = 0; i < (bigint)inds.size(); i++) {
         for (bigint m = 0; m < M; m++) {
@@ -690,7 +665,7 @@ void extract_subarray(float* X_sub, bigint M, float* X, const std::vector<bigint
     }
 }
 
-void kmeans_maxsize(int* labels, bigint M, bigint N, float* X, bigint maxsize, kmeans_opts opts)
+void kmeans_maxsize(int* labels, bigint M, bigint N, double* X, bigint maxsize, kmeans_opts opts)
 {
     if (N <= maxsize) {
         for (bigint i = 0; i < N; i++)
@@ -709,7 +684,7 @@ void kmeans_maxsize(int* labels, bigint M, bigint N, float* X, bigint maxsize, k
                 inds_k.push_back(i);
         }
         if (inds_k.size() > 0) {
-            float* X2 = (float*)malloc(sizeof(float) * M * inds_k.size());
+            double* X2 = (double*)malloc(sizeof(double) * M * inds_k.size());
             int* labels2 = (int*)malloc(sizeof(int) * inds_k.size());
             extract_subarray(X2, M, X, inds_k);
             kmeans_maxsize(labels2, M, inds_k.size(), X2, maxsize, opts);
@@ -724,7 +699,7 @@ void kmeans_maxsize(int* labels, bigint M, bigint N, float* X, bigint maxsize, k
     free(labels1);
 }
 
-void kmeans_multistep(int* labels, bigint M, bigint N, float* X, bigint K1, bigint K2, bigint K3, kmeans_opts opts)
+void kmeans_multistep(int* labels, bigint M, bigint N, double* X, bigint K1, bigint K2, bigint K3, kmeans_opts opts)
 {
     if (K2 > 1) {
         int* labels1 = (int*)malloc(sizeof(int) * N);
@@ -740,7 +715,7 @@ void kmeans_multistep(int* labels, bigint M, bigint N, float* X, bigint K1, bigi
                     inds_k.push_back(i);
             }
             if (inds_k.size() > 0) {
-                float* X2 = (float*)malloc(sizeof(float) * M * inds_k.size());
+                double* X2 = (double*)malloc(sizeof(double) * M * inds_k.size());
                 int* labels2 = (int*)malloc(sizeof(int) * inds_k.size());
                 extract_subarray(X2, M, X, inds_k);
                 kmeans_multistep(labels2, M, inds_k.size(), X2, K1, 0, 0, opts);
@@ -759,7 +734,7 @@ void kmeans_multistep(int* labels, bigint M, bigint N, float* X, bigint K1, bigi
     }
 }
 
-double dot_product(bigint N, float* X, float* Y)
+double dot_product(bigint N, double* X, double* Y)
 {
     double ret = 0;
     for (bigint i = 0; i < N; i++) {
@@ -768,7 +743,7 @@ double dot_product(bigint N, float* X, float* Y)
     return ret;
 }
 
-void normalize_vector(bigint N, float* V)
+void normalize_vector(bigint N, double* V)
 {
     double norm = sqrt(dot_product(N, V, V));
     if (!norm)
@@ -777,10 +752,10 @@ void normalize_vector(bigint N, float* V)
         V[i] /= norm;
 }
 
-void compare_clusters(double* dip_score, std::vector<bigint>* new_labels1, std::vector<bigint>* new_labels2, bigint M, bigint N1, bigint N2, float* X1, float* X2, double* centroid1, double* centroid2)
+void compare_clusters(double* dip_score, std::vector<bigint>* new_labels1, std::vector<bigint>* new_labels2, bigint M, bigint N1, bigint N2, double* X1, double* X2, double* centroid1, double* centroid2)
 {
-    float* V = (float*)malloc(sizeof(float) * M);
-    float* projection = (float*)malloc(sizeof(float) * (N1 + N2));
+    double* V = (double*)malloc(sizeof(double) * M);
+    double* projection = (double*)malloc(sizeof(double) * (N1 + N2));
     for (bigint m = 0; m < M; m++) {
         V[m] = centroid2[m] - centroid1[m];
     }
@@ -813,7 +788,7 @@ void compare_clusters(double* dip_score, std::vector<bigint>* new_labels1, std::
     free(V);
 }
 
-void compute_centroids(float* centroids, bigint M, bigint N, bigint Kmax, float* X, int* labels, std::vector<bigint>& cluster_to_compute_vec)
+void compute_centroids(double* centroids, bigint M, bigint N, bigint Kmax, double* X, int* labels, std::vector<bigint>& cluster_to_compute_vec)
 {
     std::vector<double> C(M * Kmax);
     for (bigint jj = 0; jj < M * Kmax; jj++)
@@ -849,7 +824,7 @@ void compute_centroids(float* centroids, bigint M, bigint N, bigint Kmax, float*
     }
 }
 
-void compute_covmats(float* covmats, bigint M, bigint N, bigint Kmax, float* X, int* labels, float* centroids, std::vector<bigint>& clusters_to_compute_vec)
+void compute_covmats(double* covmats, bigint M, bigint N, bigint Kmax, double* X, int* labels, double* centroids, std::vector<bigint>& clusters_to_compute_vec)
 {
     std::vector<double> C(M * M * Kmax);
     for (bigint jj = 0; jj < M * M * Kmax; jj++)
@@ -888,7 +863,7 @@ void compute_covmats(float* covmats, bigint M, bigint N, bigint Kmax, float* X, 
     }
 }
 
-void get_pairs_to_compare(std::vector<bigint>* inds1, std::vector<bigint>* inds2, bigint M, bigint K, float* active_centroids, const intarray2d& active_comparisons_made)
+void get_pairs_to_compare(std::vector<bigint>* inds1, std::vector<bigint>* inds2, bigint M, bigint K, double* active_centroids, const intarray2d& active_comparisons_made)
 {
     inds1->clear();
     inds2->clear();
@@ -947,7 +922,7 @@ void get_pairs_to_compare(std::vector<bigint>* inds1, std::vector<bigint>* inds2
     //}
 }
 
-std::vector<float> compute_centroid(bigint M, bigint N, float* X)
+std::vector<double> compute_centroid(bigint M, bigint N, double* X)
 {
     std::vector<double> ret(M);
     double count = 0;
@@ -965,21 +940,21 @@ std::vector<float> compute_centroid(bigint M, bigint N, float* X)
             ret[m] /= count;
         }
     }
-    std::vector<float> retf(M);
+    std::vector<double> retf(M);
     for (bigint m = 0; m < M; m++)
         retf[m] = ret[m];
     return retf;
 }
 
-bool matinv(bigint M, float* out, float* in)
+bool matinv(bigint M, double* out, double* in)
 {
     return smi::get_inverse_via_lu_decomposition(M, out, in);
 }
 
-void matvec(bigint M, bigint N, float* out, float* mat, float* vec)
+void matvec(bigint M, bigint N, double* out, double* mat, double* vec)
 {
     for (bigint m = 0; m < M; m++) {
-        float val = 0;
+        double val = 0;
         for (bigint n = 0; n < N; n++) {
             val += mat[m + M * n] * vec[n];
         }
@@ -987,7 +962,7 @@ void matvec(bigint M, bigint N, float* out, float* mat, float* vec)
     }
 }
 
-double dbg_compute_mean(const std::vector<float>& X)
+double dbg_compute_mean(const std::vector<double>& X)
 {
     double ret = 0;
     for (bigint i = 0; i < (bigint)X.size(); i++)
@@ -995,7 +970,7 @@ double dbg_compute_mean(const std::vector<float>& X)
     return ret / X.size();
 }
 
-double dbg_compute_var(const std::vector<float>& X)
+double dbg_compute_var(const std::vector<double>& X)
 {
     double mu = dbg_compute_mean(X);
     double ret = 0;
@@ -1004,7 +979,7 @@ double dbg_compute_var(const std::vector<float>& X)
     return ret / X.size();
 }
 
-bool merge_test(std::vector<bigint>* L12, bigint M, bigint N1, bigint N2, float* X1, float* X2, const isosplit5_opts& opts, float* centroid1, float* centroid2, float* covmat1, float* covmat2)
+bool merge_test(std::vector<bigint>* L12, bigint M, bigint N1, bigint N2, double* X1, double* X2, const isosplit5_opts& opts, double* centroid1, double* centroid2, double* covmat1, double* covmat2)
 {
     L12->resize(N1 + N2);
     for (bigint i = 0; i < N1 + N2; i++)
@@ -1014,20 +989,20 @@ bool merge_test(std::vector<bigint>* L12, bigint M, bigint N1, bigint N2, float*
         return true;
     }
 
-    //std::vector<float> centroid1 = compute_centroid(M, N1, X1);
-    //std::vector<float> centroid2 = compute_centroid(M, N2, X2);
+    //std::vector<double> centroid1 = compute_centroid(M, N1, X1);
+    //std::vector<double> centroid2 = compute_centroid(M, N2, X2);
 
-    std::vector<float> V(M);
+    std::vector<double> V(M);
     for (bigint m = 0; m < M; m++) {
         V[m] = centroid2[m] - centroid1[m];
     }
 
-    std::vector<float> avg_covmat;
+    std::vector<double> avg_covmat;
     avg_covmat.resize(M * M);
     for (bigint rr = 0; rr < M * M; rr++) {
         avg_covmat[rr] = (covmat1[rr] + covmat2[rr]) / 2;
     }
-    std::vector<float> inv_avg_covmat;
+    std::vector<double> inv_avg_covmat;
     inv_avg_covmat.resize(M * M);
     if (!matinv(M, inv_avg_covmat.data(), avg_covmat.data())) {
         fprintf(stderr, "Unable to invert matrix. This may be due to the fact that you have duplicate events. Contact Jeremy if this is not the case, or if you would prefer the program to continue in this case. Aborting.\n");
@@ -1035,7 +1010,7 @@ bool merge_test(std::vector<bigint>* L12, bigint M, bigint N1, bigint N2, float*
         return false;
     }
 
-    std::vector<float> V2(M);
+    std::vector<double> V2(M);
     matvec(M, M, V2.data(), inv_avg_covmat.data(), V.data());
     //matvec(M,M,V.data(),inv_avg_covmat.data(),V2.data());
     for (bigint i = 0; i < M; i++)
@@ -1058,7 +1033,7 @@ bool merge_test(std::vector<bigint>* L12, bigint M, bigint N1, bigint N2, float*
             V[m] /= sqrt(sumsqr);
     }
 
-    std::vector<float> projection1(N1), projection2(N2), projection12(N1 + N2);
+    std::vector<double> projection1(N1), projection2(N2), projection12(N1 + N2);
     for (bigint i = 0; i < N1; i++) {
         double tmp = 0;
         for (bigint m = 0; m < M; m++)
@@ -1096,7 +1071,7 @@ bool merge_test(std::vector<bigint>* L12, bigint M, bigint N1, bigint N2, float*
     return do_merge;
 }
 
-void compare_pairs(std::vector<bigint>* clusters_changed, bigint* total_num_label_changes, bigint M, bigint N, float* X, int* labels, const std::vector<bigint>& k1s, const std::vector<bigint>& k2s, const isosplit5_opts& opts, float* centroids, float* covmats)
+void compare_pairs(std::vector<bigint>* clusters_changed, bigint* total_num_label_changes, bigint M, bigint N, double* X, int* labels, const std::vector<bigint>& k1s, const std::vector<bigint>& k2s, const isosplit5_opts& opts, double* centroids, double* covmats)
 {
     bigint Kmax = ns_isosplit5::compute_max(N, labels);
     std::vector<bigint> clusters_changed_vec(Kmax);
@@ -1132,8 +1107,8 @@ void compare_pairs(std::vector<bigint>* clusters_changed, bigint* total_num_labe
                 do_merge = true;
             }
             else {
-                float* X1 = (float*)malloc(sizeof(float) * M * inds1.size());
-                float* X2 = (float*)malloc(sizeof(float) * M * inds2.size());
+                double* X1 = (double*)malloc(sizeof(double) * M * inds1.size());
+                double* X2 = (double*)malloc(sizeof(double) * M * inds2.size());
                 extract_subarray(X1, M, X, inds1);
                 extract_subarray(X2, M, X, inds2);
                 do_merge = merge_test(&L12, M, inds1.size(), inds2.size(), X1, X2, opts, &centroids[(k1 - 1) * M], &centroids[(k2 - 1) * M], &covmats[(k1 - 1) * M * M], &covmats[(k2 - 1) * M * M]);
@@ -1185,13 +1160,13 @@ void compare_pairs(std::vector<bigint>* clusters_changed, bigint* total_num_labe
 void get_pairs_to_compare3(std::vector<bigint>* i1s, std::vector<bigint>* i2s, bigint M, bigint N, double* centroids)
 {
     std::vector<bigint> used(N, 0);   
-    std::vector<std::vector<float>> distances(N);
+    std::vector<std::vector<double>> distances(N);
     for (bigint i = 0; i < N; i++) {
         distances[i].resize(N);
         for (bigint j = i; j < N; j++) {
             double sumsqr = 0;
             for (bigint m = 0; m < M; m++) {
-                float diff0 = centroids[m + M * i] - centroids[m + M * j];
+                double diff0 = centroids[m + M * i] - centroids[m + M * j];
                 sumsqr += diff0 * diff0;
             }
             distances[i][j] = distances[j][i] = sqrt(sumsqr);
@@ -1232,7 +1207,7 @@ void get_pairs_to_compare3(std::vector<bigint>* i1s, std::vector<bigint>* i2s, b
 
 void get_pairs_to_compare2(std::vector<bigint>* i1s, std::vector<bigint>* i2s, bigint M, bigint N, double* centroids)
 {
-    float* centroidsf = (float*)malloc(sizeof(float) * M * N);
+    double* centroidsf = (double*)malloc(sizeof(double) * M * N);
     for (bigint i = 0; i < M * N; i++)
         centroidsf[i] = centroids[i];
     int* groups = (int*)malloc(sizeof(int) * N);
@@ -1248,7 +1223,7 @@ void get_pairs_to_compare2(std::vector<bigint>* i1s, std::vector<bigint>* i2s, b
                 inds_group.push_back(i);
         bigint N0 = inds_group.size();
         if (N0 > 0) {
-            float* centroids0f = (float*)malloc(sizeof(float) * M * N0);
+            double* centroids0f = (double*)malloc(sizeof(double) * M * N0);
             double* centroids0 = (double*)malloc(sizeof(double) * M * N0);
             ns_isosplit5::extract_subarray(centroids0f, M, centroidsf, inds_group);
             for (bigint i = 0; i < M * N0; i++)
@@ -1273,7 +1248,7 @@ void get_pairs_to_compare2(std::vector<bigint>* i1s, std::vector<bigint>* i2s, b
 namespace smi {
 
 // calculate the cofactor of element (row,col)
-void get_minor(bigint M, float* out, float* in, bigint row, bigint col)
+void get_minor(bigint M, double* out, double* in, bigint row, bigint col)
 {
     bigint rr = 0;
     for (bigint i = 0; i < M; i++) {
@@ -1291,7 +1266,7 @@ void get_minor(bigint M, float* out, float* in, bigint row, bigint col)
 }
 
 // Calculate the determinant recursively.
-double determinant(bigint M, float* A)
+double determinant(bigint M, double* A)
 {
     if (M < 1) {
         printf("Error. Cannot take determinant when M<1.\n");
@@ -1302,7 +1277,7 @@ double determinant(bigint M, float* A)
 
     double ret = 0;
 
-    std::vector<float> minor;
+    std::vector<double> minor;
     minor.resize((M - 1) * (M - 1));
     for (bigint i = 0; i < M; i++) {
         get_minor(M, minor.data(), A, 0, i);
@@ -1316,7 +1291,7 @@ double determinant(bigint M, float* A)
 }
 
 // matrix inversion
-void get_inverse_via_formula(bigint M, float* out, float* in)
+void get_inverse_via_formula(bigint M, double* out, double* in)
 {
     if (M == 1) {
         if (in[0])
@@ -1334,7 +1309,7 @@ void get_inverse_via_formula(bigint M, float* out, float* in)
     }
     det = 1 / det;
 
-    std::vector<float> minor;
+    std::vector<double> minor;
     minor.resize((M - 1) * (M - 1));
     for (bigint j = 0; j < M; j++) {
         for (bigint i = 0; i < M; i++) {
@@ -1376,10 +1351,10 @@ void get_inverse_via_formula(bigint M, float* out, float* in)
 /* This function decomposes the matrix 'A' into L, U, and P. If successful,
  * the L and the U are stored in 'A', and information about the pivot in 'P'.
  * The diagonal elements of 'L' are all 1, and therefore they are not stored. */
-bigint LUPdecompose(int M, float* A, int* P)
+bigint LUPdecompose(int M, double* A, int* P)
 {
     bigint i, j, k, kd = 0, T;
-    float p, t;
+    double p, t;
 
     /* Finding the pivot of the LUP decomposition. */
     for (i = 1; i < M; i++)
@@ -1428,11 +1403,11 @@ bigint LUPdecompose(int M, float* A, int* P)
 /* This function calculates the inverse of the LUP decomposed matrix 'LU' and pivoting
  * information stored in 'P'. The inverse is returned through the matrix 'LU' itselt.
  * 'B', X', and 'Y' are used as temporary spaces. */
-bigint LUPinverse(bigint M, int* P, float* LU,
-    float* B, float* X, float* Y)
+bigint LUPinverse(bigint M, int* P, double* LU,
+    double* B, double* X, double* Y)
 {
     bigint i, j, n, m;
-    float t;
+    double t;
 
     //Initializing X and Y.
     for (n = 1; n < M; n++)
@@ -1474,9 +1449,9 @@ bigint LUPinverse(bigint M, int* P, float* LU,
     return 0;
 }
 
-bool get_inverse_via_lu_decomposition(int M, float* out, float* in)
+bool get_inverse_via_lu_decomposition(int M, double* out, double* in)
 {
-    std::vector<float> A((M + 1) * (M + 1));
+    std::vector<double> A((M + 1) * (M + 1));
     std::vector<int> P((M + 1));
     for (bigint i = 0; i < M; i++) {
         for (bigint j = 0; j < M; j++) {
@@ -1488,9 +1463,9 @@ bool get_inverse_via_lu_decomposition(int M, float* out, float* in)
         //handle case reported by Alex Morley. Don't proceed because inverse will crash (I believe)
         return false;
     }
-    std::vector<float> B((M + 1) * (M + 1));
-    std::vector<float> X(M + 1);
-    std::vector<float> Y(M + 1);
+    std::vector<double> B((M + 1) * (M + 1));
+    std::vector<double> X(M + 1);
+    std::vector<double> Y(M + 1);
     LUPinverse(M + 1, P.data(), A.data(), B.data(), X.data(), Y.data());
     for (bigint i = 0; i < M; i++) {
         for (bigint j = 0; j < M; j++) {

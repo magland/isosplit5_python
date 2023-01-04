@@ -19,31 +19,9 @@
 #include <math.h>
 #include <stdio.h>
 
-namespace ns_isocut5 {
-void copy_samples(bigint N, float* out, float* in);
-double sum(bigint N, float* X);
-bigint find_min_index(bigint N, float* X);
-bigint find_max_index(bigint N, float* X);
-double compute_ks4(bigint N, float* counts1, float* counts2);
-double compute_ks5(bigint* critical_range_min, bigint* critical_range_max, bigint N, float* counts1, float* counts2, bigint peak_index);
-void debug_print_array(bigint N, float* X);
-}
-
-void isocut5_mex(double* dipscore, double* cutpoint, int N, double* samples)
+void isocut5(double* dipscore_out, double* cutpoint_out, bigint N, double* samples, isocut5_opts opts)
 {
-    *dipscore = 0;
-    *cutpoint = 0;
-    isocut5_opts opts;
-    float* samplesf = (float*)malloc(sizeof(float) * N);
-    for (bigint i = 0; i < N; i++)
-        samplesf[i] = samples[i];
-    isocut5(dipscore, cutpoint, N, samplesf, opts);
-    free(samplesf);
-}
-
-void isocut5(double* dipscore_out, double* cutpoint_out, bigint N, float* samples, isocut5_opts opts)
-{
-    float* samples_sorted = (float*)malloc(sizeof(float) * N);
+    double* samples_sorted = (double*)malloc(sizeof(double) * N);
 
     // sort the samples if needed
     if (opts.already_sorted)
@@ -51,41 +29,42 @@ void isocut5(double* dipscore_out, double* cutpoint_out, bigint N, float* sample
     else
         jisotonic5_sort(N, samples_sorted, samples);
 
-    float num_bins_factor = 1;
+    double num_bins_factor = 1;
     bigint num_bins = ceil(sqrt(N * 1.0 / 2) * num_bins_factor);
 
     bigint num_bins_1 = ceil(num_bins / 2);
     bigint num_bins_2 = num_bins - num_bins_1;
     bigint num_intervals = num_bins_1 + num_bins_2;
-    float* intervals = (float*)malloc(sizeof(float) * num_intervals);
+    double* intervals = (double*)malloc(sizeof(double) * num_intervals);
     for (bigint i = 0; i < num_bins_1; i++)
         intervals[i] = i + 1;
     for (bigint i = 0; i < num_bins_2; i++)
         intervals[num_intervals - 1 - i] = i + 1;
-    float alpha = (N - 1) / ns_isocut5::sum(num_intervals, intervals);
+    double alpha = (N - 1) / ns_isocut5::sum(num_intervals, intervals);
     for (bigint i = 0; i < num_intervals; i++)
         intervals[i] *= alpha;
     bigint N_sub = num_intervals + 1;
-    float* inds = (float*)malloc(sizeof(float) * N_sub);
+    double* inds = (double*)malloc(sizeof(double) * N_sub);
     inds[0] = 0;
     for (bigint i = 0; i < num_intervals; i++)
         inds[i + 1] = inds[i] + intervals[i];
-    float* X_sub = (float*)malloc(sizeof(float) * N_sub);
+    double* X_sub = (double*)malloc(sizeof(double) * N_sub);
     for (bigint i = 0; i < N_sub; i++)
         X_sub[i] = samples_sorted[(bigint)inds[i]];
-    float* densities = (float*)malloc(sizeof(float) * (N_sub - 1));
-    float* spacings = (float*)malloc(sizeof(float) * (N_sub - 1));
-    float* multiplicities = (float*)malloc(sizeof(float) * (N_sub - 1));
+    double* densities = (double*)malloc(sizeof(double) * (N_sub - 1));
+    double* spacings = (double*)malloc(sizeof(double) * (N_sub - 1));
+    double* multiplicities = (double*)malloc(sizeof(double) * (N_sub - 1));
     for (bigint i = 0; i < N_sub - 1; i++) {
         spacings[i] = X_sub[i + 1] - X_sub[i];
         multiplicities[i] = ((bigint)inds[i + 1]) - ((bigint)inds[i]);
         densities[i] = multiplicities[i] / spacings[i];
     }
 
-    float* densities_unimodal_fit = (float*)malloc(sizeof(float) * (N_sub - 1));
-    float* densities_resid = (float*)malloc(sizeof(float) * (N_sub - 1));
-    float* densities_unimodal_fit_times_spacings = (float*)malloc(sizeof(float) * (N_sub - 1));
+    double* densities_unimodal_fit = (double*)malloc(sizeof(double) * (N_sub - 1));
+    double* densities_resid = (double*)malloc(sizeof(double) * (N_sub - 1));
+    double* densities_unimodal_fit_times_spacings = (double*)malloc(sizeof(double) * (N_sub - 1));
     jisotonic5_updown(N_sub - 1, densities_unimodal_fit, densities, multiplicities);
+
     for (bigint i = 0; i < N_sub - 1; i++)
         densities_resid[i] = densities[i] - densities_unimodal_fit[i];
     for (bigint i = 0; i < N_sub - 1; i++)
@@ -95,9 +74,9 @@ void isocut5(double* dipscore_out, double* cutpoint_out, bigint N, float* sample
     *dipscore_out = ns_isocut5::compute_ks5(&critical_range_min, &critical_range_max, N_sub - 1, multiplicities, densities_unimodal_fit_times_spacings, peak_index);
     bigint critical_range_length = critical_range_max - critical_range_min + 1;
 
-    float* densities_resid_on_critical_range = (float*)malloc(sizeof(float) * (critical_range_length));
-    float* densities_resid_fit_on_critical_range = (float*)malloc(sizeof(float) * (critical_range_length));
-    float* weights_for_downup = (float*)malloc(sizeof(float) * (critical_range_length));
+    double* densities_resid_on_critical_range = (double*)malloc(sizeof(double) * (critical_range_length));
+    double* densities_resid_fit_on_critical_range = (double*)malloc(sizeof(double) * (critical_range_length));
+    double* weights_for_downup = (double*)malloc(sizeof(double) * (critical_range_length));
     for (bigint i = 0; i < critical_range_length; i++) {
         densities_resid_on_critical_range[i] = densities_resid[critical_range_min + i];
         weights_for_downup[i] = spacings[critical_range_min + i];
@@ -122,9 +101,9 @@ void isocut5(double* dipscore_out, double* cutpoint_out, bigint N, float* sample
     free(densities_resid_fit_on_critical_range);
 }
 
-void isocut5_old(double* dipscore_out, double* cutpoint_out, bigint N, float* samples, isocut5_opts opts)
+void isocut5_old(double* dipscore_out, double* cutpoint_out, bigint N, double* samples, isocut5_opts opts)
 {
-    float* samples_sorted = (float*)malloc(sizeof(float) * N);
+    double* samples_sorted = (double*)malloc(sizeof(double) * N);
 
     // sort the samples if needed
     if (opts.already_sorted)
@@ -132,41 +111,41 @@ void isocut5_old(double* dipscore_out, double* cutpoint_out, bigint N, float* sa
     else
         jisotonic5_sort(N, samples_sorted, samples);
 
-    float num_bins_factor = 1;
+    double num_bins_factor = 1;
     bigint num_bins = ceil(sqrt(N * 1.0 / 2) * num_bins_factor);
 
     bigint num_bins_1 = ceil(num_bins / 2);
     bigint num_bins_2 = num_bins - num_bins_1;
     bigint num_intervals = num_bins_1 + num_bins_2;
-    float* intervals = (float*)malloc(sizeof(float) * num_intervals);
+    double* intervals = (double*)malloc(sizeof(double) * num_intervals);
     for (bigint i = 0; i < num_bins_1; i++)
         intervals[i] = i + 1;
     for (bigint i = 0; i < num_bins_2; i++)
         intervals[num_intervals - 1 - i] = i + 1;
-    float alpha = (N - 1) / ns_isocut5::sum(num_intervals, intervals);
+    double alpha = (N - 1) / ns_isocut5::sum(num_intervals, intervals);
     for (bigint i = 0; i < num_intervals; i++)
         intervals[i] *= alpha;
     bigint N_sub = num_intervals + 1;
-    float* inds = (float*)malloc(sizeof(float) * N_sub);
+    double* inds = (double*)malloc(sizeof(double) * N_sub);
     inds[0] = 0;
     for (bigint i = 0; i < num_intervals; i++)
         inds[i + 1] = inds[i] + intervals[i];
-    float* X_sub = (float*)malloc(sizeof(float) * N_sub);
+    double* X_sub = (double*)malloc(sizeof(double) * N_sub);
     for (bigint i = 0; i < N_sub; i++)
         X_sub[i] = samples_sorted[(bigint)inds[i]];
-    float* densities = (float*)malloc(sizeof(float) * (N_sub - 1));
-    float* spacings = (float*)malloc(sizeof(float) * (N_sub - 1));
-    float* multiplicities = (float*)malloc(sizeof(float) * (N_sub - 1));
+    double* densities = (double*)malloc(sizeof(double) * (N_sub - 1));
+    double* spacings = (double*)malloc(sizeof(double) * (N_sub - 1));
+    double* multiplicities = (double*)malloc(sizeof(double) * (N_sub - 1));
     for (bigint i = 0; i < N_sub - 1; i++) {
         spacings[i] = X_sub[i + 1] - X_sub[i];
         multiplicities[i] = ((bigint)inds[i + 1]) - ((bigint)inds[i]);
         densities[i] = multiplicities[i] / spacings[i];
     }
 
-    float* densities_unimodal_fit = (float*)malloc(sizeof(float) * (N_sub - 1));
-    float* densities_resid = (float*)malloc(sizeof(float) * (N_sub - 1));
-    float* densities_resid_fit = (float*)malloc(sizeof(float) * (N_sub - 1));
-    float* weights_for_downup = (float*)malloc(sizeof(float) * (N_sub - 1));
+    double* densities_unimodal_fit = (double*)malloc(sizeof(double) * (N_sub - 1));
+    double* densities_resid = (double*)malloc(sizeof(double) * (N_sub - 1));
+    double* densities_resid_fit = (double*)malloc(sizeof(double) * (N_sub - 1));
+    double* weights_for_downup = (double*)malloc(sizeof(double) * (N_sub - 1));
 
     jisotonic5_updown(N_sub - 1, densities_unimodal_fit, densities, multiplicities);
     for (bigint i = 0; i < N_sub - 1; i++)
@@ -178,7 +157,7 @@ void isocut5_old(double* dipscore_out, double* cutpoint_out, bigint N, float* sa
     bigint cutpoint_index = ns_isocut5::find_min_index(N_sub - 1, densities_resid_fit);
     *cutpoint_out = (X_sub[cutpoint_index] + X_sub[cutpoint_index + 1]) / 2;
 
-    float* densities_unimodal_fit_times_spacings = (float*)malloc(sizeof(float) * (N_sub - 1));
+    double* densities_unimodal_fit_times_spacings = (double*)malloc(sizeof(double) * (N_sub - 1));
     for (bigint i = 0; i < N_sub - 1; i++)
         densities_unimodal_fit_times_spacings[i] = densities_unimodal_fit[i] * spacings[i];
     *dipscore_out = ns_isocut5::compute_ks4(N_sub - 1, multiplicities, densities_unimodal_fit_times_spacings);
@@ -199,13 +178,13 @@ void isocut5_old(double* dipscore_out, double* cutpoint_out, bigint N, float* sa
 
 namespace ns_isocut5 {
 
-void copy_samples(bigint N, float* out, float* in)
+void copy_samples(bigint N, double* out, double* in)
 {
     for (bigint i = 0; i < N; i++)
         out[i] = in[i];
 }
 
-double sum(bigint N, float* X)
+double sum(bigint N, double* X)
 {
     double ret = 0;
     for (bigint i = 0; i < N; i++)
@@ -213,7 +192,7 @@ double sum(bigint N, float* X)
     return ret;
 }
 
-bigint find_min_index(bigint N, float* X)
+bigint find_min_index(bigint N, double* X)
 {
     bigint ret = 0;
     for (bigint i = 0; i < N; i++) {
@@ -223,7 +202,7 @@ bigint find_min_index(bigint N, float* X)
     return ret;
 }
 
-bigint find_max_index(bigint N, float* X)
+bigint find_max_index(bigint N, double* X)
 {
     bigint ret = 0;
     for (bigint i = 0; i < N; i++) {
@@ -233,7 +212,7 @@ bigint find_max_index(bigint N, float* X)
     return ret;
 }
 
-double compute_ks4(bigint N, float* counts1, float* counts2)
+double compute_ks4(bigint N, double* counts1, double* counts2)
 {
     double sum_counts1 = sum(N, counts1);
     double sum_counts2 = sum(N, counts2);
@@ -245,15 +224,17 @@ double compute_ks4(bigint N, float* counts1, float* counts2)
     for (bigint i = 0; i < N; i++) {
         cumsum_counts1 += counts1[i];
         cumsum_counts2 += counts2[i];
-        double diff = fabs(cumsum_counts1 / sum_counts1 - cumsum_counts2 / sum_counts2);
-        if (diff > max_diff)
-            max_diff = diff;
+        if ((sum_counts1 > 0) && (sum_counts2 > 0)) {
+            double diff = fabs(cumsum_counts1 / sum_counts1 - cumsum_counts2 / sum_counts2);
+            if (diff > max_diff)
+                max_diff = diff;
+        }
     }
 
     return max_diff * sqrt((sum_counts1 + sum_counts2) / 2);
 }
 
-double compute_ks5(bigint* critical_range_min, bigint* critical_range_max, bigint N, float* counts1, float* counts2, bigint peak_index)
+double compute_ks5(bigint* critical_range_min, bigint* critical_range_max, bigint N, double* counts1, double* counts2, bigint peak_index)
 {
     *critical_range_min = 0;
     *critical_range_max = N - 1; //should get over-written!
@@ -261,8 +242,8 @@ double compute_ks5(bigint* critical_range_min, bigint* critical_range_max, bigin
 
     // from the left
     {
-        float* counts1_left = (float*)malloc(sizeof(float) * (peak_index + 1));
-        float* counts2_left = (float*)malloc(sizeof(float) * (peak_index + 1));
+        double* counts1_left = (double*)malloc(sizeof(double) * (peak_index + 1));
+        double* counts2_left = (double*)malloc(sizeof(double) * (peak_index + 1));
         for (bigint i = 0; i <= peak_index; i++) {
             counts1_left[i] = counts1[i];
             counts2_left[i] = counts2[i];
@@ -281,8 +262,8 @@ double compute_ks5(bigint* critical_range_min, bigint* critical_range_max, bigin
 
     // from the right
     {
-        float* counts1_right = (float*)malloc(sizeof(float) * (N - peak_index));
-        float* counts2_right = (float*)malloc(sizeof(float) * (N - peak_index));
+        double* counts1_right = (double*)malloc(sizeof(double) * (N - peak_index));
+        double* counts2_right = (double*)malloc(sizeof(double) * (N - peak_index));
         for (bigint i = 0; i < N - peak_index; i++) {
             counts1_right[i] = counts1[N - 1 - i];
             counts2_right[i] = counts2[N - 1 - i];
@@ -302,7 +283,7 @@ double compute_ks5(bigint* critical_range_min, bigint* critical_range_max, bigin
     return ks_best;
 }
 
-void debug_print_array(bigint N, float* X)
+void debug_print_array(bigint N, double* X)
 {
     for (bigint i = 0; i < N; i++) {
         if ((i > 0) && (i % 10 == 0))
