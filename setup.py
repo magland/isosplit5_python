@@ -15,7 +15,8 @@ class get_pybind_include(object):
         import pybind11
         return pybind11.get_include(self.user)
 
-ext_modules = [Extension(
+ext_modules = [
+    Extension(
         'isosplit5_interface',
         ['src/isosplit5.cpp','src/isocut5.cpp','src/jisotonic5.cpp','src/isosplit5_pybind11.cpp'],
         include_dirs=[
@@ -27,7 +28,21 @@ ext_modules = [Extension(
         extra_compile_args=[],
         extra_link_args=[],
         language='c++'
-    ) ]
+    ),
+    Extension(
+        'isosplit6_interface',
+        ['src/isosplit6.cpp', 'src/isocut6.cpp', 'src/isosplit5.cpp','src/isocut5.cpp','src/jisotonic5.cpp','src/isosplit6_pybind11.cpp'],
+        include_dirs=[
+            # Path to pybind11 headers
+            get_pybind_include(),
+            get_pybind_include(user=True)
+        ],
+        libraries=[],
+        extra_compile_args=[],
+        extra_link_args=[],
+        language='c++'
+    )
+]
 
 # As of Python 3.6, CCompiler has a `has_flag` method.
 # cf http://bugs.python.org/issue26689

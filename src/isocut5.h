@@ -25,7 +25,17 @@ struct isocut5_opts {
     bool already_sorted = false;
 };
 
-void isocut5(double* dipscore_out, double* cutpoint_out, bigint N, float* samples, isocut5_opts opts);
+namespace ns_isocut5 {
+void copy_samples(bigint N, double* out, double* in);
+double sum(bigint N, double* X);
+bigint find_min_index(bigint N, double* X);
+bigint find_max_index(bigint N, double* X);
+double compute_ks4(bigint N, double* counts1, double* counts2);
+double compute_ks5(bigint* critical_range_min, bigint* critical_range_max, bigint N, double* counts1, double* counts2, bigint peak_index);
+void debug_print_array(bigint N, double* X);
+}
+
+void isocut5(double* dipscore_out, double* cutpoint_out, bigint N, double* samples, isocut5_opts opts);
 
 /*
  * MCWRAP [ dipscore[1,1], cutpoint[1,1] ] = isocut5_mex(samples[1,N])

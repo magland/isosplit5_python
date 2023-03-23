@@ -13,18 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef ISOSPLIT6_H
+#define ISOSPLIT6_H
 
-#ifndef jisotonic5_h
-#define jisotonic5_h
+//#include "mlcommon.h"
+#include "isocut6.h"
 
-#include <stdlib.h>
-#include <cstdint>
+struct isosplit6_opts {
+    double isocut_threshold = 2.0;
+    int min_cluster_size = 10;
+    int K_init = 200;
+    bool refine_clusters = false;
+    int max_iterations_per_pass = 500;
+};
 
-typedef int64_t bigint;
-
-void jisotonic5(bigint N, double* BB, double* MSE, double* AA, double* WW);
-void jisotonic5_updown(bigint N, double* out, double* in, double* weights);
-void jisotonic5_downup(bigint N, double* out, double* in, double* weights);
-void jisotonic5_sort(bigint N, double* out, const double* in);
-
-#endif
+bool isosplit6(int* labels_out, bigint M, bigint N, double* X, isosplit6_opts opts);
+ 
+#endif // ISOSPLIT6_H
