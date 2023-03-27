@@ -37,7 +37,12 @@ void isocut6(double* dipscore_out, double* cutpoint_out, bigint N, double* sampl
     for (bigint i = 0; i < N - 1; i++) {
         spacings[i] = X[i + 1] - X[i];
         multiplicities[i] = 1;
-        log_densities[i] = log(multiplicities[i] / spacings[i]);
+        if (spacings[i]) {
+            log_densities[i] = log(multiplicities[i] / spacings[i]);
+        }
+        else {
+            log_densities[i] = log(0.000000001); // I hope this is small enough
+        }
     }
 
     double* log_densities_unimodal_fit = (double*)malloc(sizeof(double) * (N - 1));
