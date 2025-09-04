@@ -97,24 +97,7 @@ class BuildExt(build_ext):
             ext.extra_compile_args = opts
         build_ext.build_extensions(self)
 
-#with open("README.md", "r") as fh:
-#    long_description = fh.read()
-
 setup(
-    name='isosplit5',
-    version='0.2.2',
-    author="Jeremy Magland",
-    author_email="",
-    description="Efficient clustering algorithm for unknown number of unimodal clusters",
-    #long_description=long_description,
-    #long_description_content_type="text/markdown",
-    url="https://github.com/magland/isosplit5_python",
-    packages=find_packages(),
-    license="Apache 2",
     ext_modules=ext_modules,
     cmdclass={'build_ext': BuildExt},
-    install_requires=[
-        'numpy','pybind11>=2.2'
-    ],
-    setup_requires=['pybind11>=2.2']
 )

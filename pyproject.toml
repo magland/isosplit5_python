@@ -1,0 +1,25 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+
+requires = [ "pybind11>=2.2", "setuptools>=61", "wheel" ]
+
+[project]
+name = "isosplit5"
+version = "0.2.2"
+description = "Efficient clustering algorithm for unknown number of unimodal clusters"
+license = { text = "Apache License (2.0)" }
+authors = [
+  { name = "Jeremy Magland", email = "jmagland@flatironinstitute.org" },
+]
+classifiers = [
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+]
+
+dependencies = [ "numpy", "pybind11>=2.2" ]
+urls.Homepage = "https://github.com/magland/isosplit5_python"
+
+[tool.setuptools.packages.find]
+where = [ "." ]
+include = [ "*" ]
